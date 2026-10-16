@@ -2,7 +2,6 @@ import {v2 as cloudinary} from 'cloudinary'
 
 import fs from 'fs'// file system -- provided by node by default 
 
-import { v2 as cloudinary } from 'cloudinary';
 
 
     // Configuration

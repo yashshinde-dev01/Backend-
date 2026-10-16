@@ -1,0 +1,72 @@
+import { asyncHandler } from "../utils/asyncHandler.js";
+import {ApiError} from '../utils/ApiError.js'
+import {User} from '../models/user.models.js'
+import {uploadOnCloudinary} from '../utils/cloudinary.js'
+
+import { ApiResponse } from "../utils/ApiResponse.js";
+
+const registerUser=asyncHandler(async (req,res)=>{
+    //get user data from frontend 
+    //validation --not empty like this 
+    // chack if user already exist: username , email
+    // chack for images , chack for avatar 
+    // uplad then in clodinary,chack avatear 
+    // create user onject-create entry in db 
+    // remove password and refresh token field from response 
+    // check for user cratetion 
+    // return res
+
+    const {fullName,email,username,password}=req.body
+    console.log("email",email);
+    if(fullName==''){
+        throw new ApiError(400,"full name is required ")
+    }
+    if(
+        [fullName,email,username,password].some((field)=>field ?.trim()==='')
+    ){
+        throw new ApiError(400,"All fields are required")
+    }
+    const existedUser=User.findOne({
+        $or:[{username},{email}]
+    })
+    if(existedUser){
+        throw new ApiError(409,"User with email or already exist")
+    }
+
+    const avatarLocalPath=req.files?.avatar[0]?.path;
+
+    const coverImageLocalpath=req.files?.converImage[0]?.path;
+
+    if(!avatarLocalPath){
+        throw new ApiError(400,"avatar file is required")
+    }
+    const avatar=await uploadOnCloudinary(avatarLocalPath)
+    const coverImage=await uploadOnCloudinary(coverImageLocalpath)
+    if(!avatar){
+         throw new ApiError(400,"avatar file is required")
+    }
+
+     const user=await User.create({
+        fullName,
+        avatar:avatar.url,
+        coverImage:coverImage?.url || "",
+        email,
+        password,
+        username:username.toLowercase()
+    })
+    const createdUser=await User.findById(user._id).select(
+        "-password-refreshToken"
+    )// find user in database
+    //.select for to remove password and referesh tokens 
+
+    if(!createdUser){
+        throw new ApiError(500,'something went wrong while registring the user')
+    }
+
+    return res.status(201).json(
+        new ApiResponse(200,createdUser,"User Registered Successfully")
+    )
+})
+
+
+export {registerUser} 
